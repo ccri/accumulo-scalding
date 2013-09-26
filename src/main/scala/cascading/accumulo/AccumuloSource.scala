@@ -1,7 +1,7 @@
 package cascading.accumulo
 
 import cascading.flow.FlowProcess
-import cascading.scheme.{SourceCall, SinkCall, Scheme}
+import cascading.scheme.{SourceCall, SinkCall}
 import cascading.tap.Tap
 import cascading.tuple.{TupleEntrySchemeCollector, TupleEntryIterator, TupleEntryCollector}
 import com.twitter.scalding._
@@ -17,10 +17,11 @@ class AccumuloSource(instance: String,
                      tableName: String,
                      outputPath: String)
   extends Source {
-  override val hdfsScheme =
-    new AccumuloScheme(outputPath).asInstanceOf[Scheme[JobConf, RecordReader[_, _], OutputCollector[_, _], _, _]]
 
-  override def createTap(readOrWrite: AccessMode)(implicit mode: Mode): Tap[_, _, _] =
+  override val hdfsScheme =
+    new AccumuloScheme(outputPath).asInstanceOf[GenericScheme]
+
+  override def createTap(readOrWrite: AccessMode)(implicit mode: Mode): GenericTap =
     mode match {
       case hdfsMode @ Hdfs(_, _) => readOrWrite match {
         case Read => new AccumuloTap(tableName, new AccumuloScheme(outputPath))
@@ -31,14 +32,14 @@ class AccumuloSource(instance: String,
 }
 
 class AccumuloTap(tableName: String, scheme: AccumuloScheme)
-  extends Tap[JobConf, RecordReader[Key,Value], OutputCollector[Key,Value]](scheme) {
+  extends Tap[JobConf, KVRecordReader, KVOutputCollector](scheme) {
 
   val id = UUID.randomUUID().toString
   def getIdentifier: String = id
-  def openForRead(fp: FlowProcess[JobConf], rr: RecordReader[Key,Value]): TupleEntryIterator = ???
+  def openForRead(fp: FlowProcess[JobConf], rr: KVRecordReader): TupleEntryIterator = ???
 
-  def openForWrite(fp: FlowProcess[JobConf], out: OutputCollector[Key, Value]): TupleEntryCollector = 
-    new TupleEntrySchemeCollector[JobConf, OutputCollector[Key,Value]](fp, scheme, out)
+  def openForWrite(fp: FlowProcess[JobConf], out: KVOutputCollector): TupleEntryCollector =
+    new TupleEntrySchemeCollector[JobConf, KVOutputCollector](fp, scheme, out)
 
   def createResource(conf: JobConf): Boolean = true
 
@@ -50,7 +51,7 @@ class AccumuloTap(tableName: String, scheme: AccumuloScheme)
 }
 
 class AccumuloFileOutputFormatDeprecated extends org.apache.hadoop.mapred.FileOutputFormat[Key,Value]  {
-  def getRecordWriter(fs: FileSystem, conf: JobConf, s: String, progressable: Progressable): RecordWriter[Key, Value] = {
+  def getRecordWriter(fs: FileSystem, conf: JobConf, s: String, progressable: Progressable): KVRecordWriter = {
     val file = new Path(FileOutputFormat.getWorkOutputPath(conf), FileOutputFormat.getUniqueName(conf, "accingest") + ".rf")
     val skvWriter =
       FileOperations.getInstance().openWriter(
@@ -61,7 +62,7 @@ class AccumuloFileOutputFormatDeprecated extends org.apache.hadoop.mapred.FileOu
 
     skvWriter.startDefaultLocalityGroup()
 
-    new RecordWriter[Key,Value] {
+    new KVRecordWriter {
       var hasData = false
 
       def write(k: Key, v: Value) {
@@ -77,19 +78,19 @@ class AccumuloFileOutputFormatDeprecated extends org.apache.hadoop.mapred.FileOu
   }
 
 }
-class AccumuloScheme(outputPath: String) extends Scheme[JobConf, RecordReader[Key,Value], OutputCollector[Key,Value], Array[Any], Array[Any]] {
-  def sourceConfInit(fp: FlowProcess[JobConf], tap: Tap[JobConf, RecordReader[Key,Value], OutputCollector[Key,Value]], conf: JobConf) {}
+class AccumuloScheme(outputPath: String) extends KVScheme {
+  def sourceConfInit(fp: FlowProcess[JobConf], tap: KVTap, conf: JobConf) {}
 
-  def sinkConfInit(fp: FlowProcess[JobConf], tap: Tap[JobConf, RecordReader[Key,Value], OutputCollector[Key,Value]], conf: JobConf) {
+  def sinkConfInit(fp: FlowProcess[JobConf], tap: KVTap, conf: JobConf) {
     conf.setOutputFormat(classOf[AccumuloFileOutputFormatDeprecated])
     conf.setOutputKeyClass(classOf[Key])
     conf.setOutputValueClass(classOf[Value])
     FileOutputFormat.setOutputPath(conf, new Path(outputPath))
   }
 
-  def source(fp: FlowProcess[JobConf], sourceCall: SourceCall[Array[Any], RecordReader[Key,Value]]): Boolean = true
+  def source(fp: FlowProcess[JobConf], sourceCall: SourceCall[Array[Any], KVRecordReader]): Boolean = true
 
-  def sink(fp: FlowProcess[JobConf], sinkCall: SinkCall[Array[Any], OutputCollector[Key,Value]]) {
+  def sink(fp: FlowProcess[JobConf], sinkCall: SinkCall[Array[Any], KVOutputCollector]) {
     val entry = sinkCall.getOutgoingEntry
     val outputCollector = sinkCall.getOutput
     val k = entry.getObject("key").asInstanceOf[Key]
