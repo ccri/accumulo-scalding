@@ -23,8 +23,7 @@ class AccumuloSource(instance: String,
                      outputPath: String)
   extends Source with Mappable[(Key,Value)] {
 
-  override val hdfsScheme =
-    new AccumuloScheme(outputPath).asInstanceOf[GenericScheme]
+  val hdfsScheme = new AccumuloScheme(outputPath).asInstanceOf[GenericScheme]
 
   override def createTap(readOrWrite: AccessMode)(implicit mode: Mode): GenericTap =
     mode match {
@@ -32,12 +31,12 @@ class AccumuloSource(instance: String,
         case Read => new AccumuloTap(tableName, new AccumuloScheme(outputPath))
         case Write => new AccumuloTap(tableName, new AccumuloScheme(outputPath))
       }
-      case _ => super.createTap(readOrWrite)(mode)
+      case _ => throw new NotImplementedError()
     }
 
-  val converter: TupleConverter[(Key, Value)] = new TupleConverter[(Key,Value)] {
-    def arity: Int = 2
 
+  def converter[U >: (Key, Value)]: TupleConverter[U] = new TupleConverter[U] {
+    def arity: Int = 2
     def apply(te: TupleEntry): (Key, Value) = (te.getObject(0).asInstanceOf[Key], te.getObject(1).asInstanceOf[Value])
   }
 }
@@ -140,14 +139,14 @@ class AccumuloInputFormatDeprecated extends org.apache.hadoop.mapred.InputFormat
   val inputFormat = new AccumuloInputFormat()
 
   def getSplits(p1: JobConf, p2: Int): Array[InputSplit] = {
-    val newRanges = inputFormat.getSplits(new org.apache.hadoop.mapreduce.JobContext(p1, new JobID()))
+    val newRanges = inputFormat.getSplits(new mr.task.JobContextImpl(p1, new JobID()))
     newRanges.map { is => new DelegatingSplitInfo(is.asInstanceOf[RangeInputSplit]) }.toArray
   }
 
   def getRecordReader(p1: InputSplit, p2: JobConf, p3: Reporter): RecordReader[Key, Value] =
 
     new RecordReader[Key,Value] {
-      val taskAttemptContext = new mr.TaskAttemptContext(p2, new mr.TaskAttemptID())
+      val taskAttemptContext = new mr.task.TaskAttemptContextImpl(p2, new mr.TaskAttemptID())
       val delegate = inputFormat.createRecordReader(null, taskAttemptContext)
       delegate.initialize(p1.asInstanceOf[DelegatingSplitInfo].is, taskAttemptContext)
 
