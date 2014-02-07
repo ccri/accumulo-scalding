@@ -5,7 +5,10 @@
     <artifactId>accumulo-scalding</artifactId>
     <version>2.0-SNAPSHOT</version>
     <properties>
-        <scala.version>2.10.2</scala.version>
+        <scala.version>2.10.3</scala.version>
+        <zookeeper.version>3.4.5</zookeeper.version>
+        <accumulo-core.version>1.5.1-SNAPSHOT</accumulo-core.version>
+        <hadoop.version>2.2.0</hadoop.version>
     </properties>
 
     <repositories>
@@ -44,7 +47,7 @@
         <dependency>
             <groupId>org.apache.zookeeper</groupId>
             <artifactId>zookeeper</artifactId>
-            <version>3.4.5</version>
+            <version>${zookeeper.version}</version>
             <exclusions>
                <exclusion>
                    <groupId>com.sun.jmx</groupId>
@@ -63,12 +66,12 @@
         <dependency>
             <groupId>org.apache.accumulo</groupId>
             <artifactId>accumulo-core</artifactId>
-            <version>1.5.0</version>
+            <version>${accumulo-core.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
-            <version>2.0.0-cdh4.5.0</version>
+            <version>${hadoop.version}</version>
         </dependency>
         <dependency>
             <groupId>com.twitter</groupId>

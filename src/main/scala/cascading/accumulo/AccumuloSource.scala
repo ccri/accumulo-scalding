@@ -8,8 +8,7 @@ import cascading.tuple._
 import com.twitter.scalding._
 import java.io.{DataOutput, DataInput}
 import java.util.UUID
-import org.apache.accumulo.core.client.mapreduce.InputFormatBase.RangeInputSplit
-import org.apache.accumulo.core.client.mapreduce.{InputFormatBase, AccumuloInputFormat}
+import org.apache.accumulo.core.client.mapreduce.{RangeInputSplit, InputFormatBase, AccumuloInputFormat}
 import org.apache.accumulo.core.conf.AccumuloConfiguration
 import org.apache.accumulo.core.data.{Value, Key}
 import org.apache.accumulo.core.file.FileOperations
