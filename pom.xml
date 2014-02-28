@@ -11,25 +11,6 @@
         <hadoop.version>2.2.0</hadoop.version>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>art</id>
-            <name>art</name>
-            <url>http://art.ccri.com:8081/artifactory/libs-releases</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-        <repository>
-            <id>art-snapshots</id>
-            <name>art</name>
-            <url>http://art.ccri.com:8081/artifactory/libs-snapshots</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
     <pluginRepositories>
         <pluginRepository>
             <id>scala-tools.org</id>
